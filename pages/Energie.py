@@ -312,10 +312,17 @@ def monthly_bar_chart(dfs, comparison_type, energy_type):
     # Show the interactive chart
     return fig
 
+def keyfig_current_year(dfs):
+    df = dfs[str(datetime.now().year)]
+    used_heating = df["Heizung [kWh/m²]"].sum()
+    return used_heating
+
 def main():
     st.title('Energieverbrauch')
 
     dfs = get_data()
+
+    st.subheader("Dieses Jahr wurden schon {} kWh/m² von 26 kWh/m² geheizt.".format(round(keyfig_current_year(dfs),2)))
 
     tabs = st.tabs(['Interval', 'Jährlicher Vergleich', 'Monatlicher Vergleich'])
 
