@@ -22,6 +22,11 @@ class Sparplan():
         self.set_rate(rate)
         self.set_interval(interval)
         self.df = pd.DataFrame(columns = ["date", "payed", "value", "gained"])
+        
+        self.etf_endwert = 0
+        self.etf_kursgewinn = 0
+        self.etf_eingezahlt = 0
+        self.etf_steuer = 0
 
     def set_rate(self, rate):
         if isinstance(rate, Number):
@@ -81,6 +86,18 @@ class Sparplan():
     def get_interval(self):
         return self.interval
     
+    def get_endwert(self):
+        return self.etf_endwert
+    
+    def get_kursgewinn(self):
+        return self.etf_kursgewinn
+    
+    def get_eingezahlt(self):
+        return self.etf_eingezahlt
+    
+    def get_steuer(self):
+        return self.etf_steuer
+    
     def calculate(self, cost, amount):
         if not isinstance(cost, Number):
             raise Exception("Laufende Kosten sind keine Zahl")
@@ -111,6 +128,11 @@ class Sparplan():
             self.df = pd.concat([self.df, df_to_add], ignore_index=True)
 
             current_date += relativedelta(months = self.interval)
+
+        self.etf_endwert = self.df.loc[len(self.df)-1, "value"]
+        self.etf_kursgewinn = self.df.loc[len(self.df)-1, "gained"]
+        self.etf_eingezahlt = self.df.loc[len(self.df)-1, "payed"]
+        self.etf_steuer = self.etf_kursgewinn * 0.7 * 0.28
 
         return self.df
     

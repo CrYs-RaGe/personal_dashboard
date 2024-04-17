@@ -33,17 +33,34 @@ def main():
         with cols[0]:
             with st.container(border = True):
                 st.write("**Endwert**")
-                st.write(str(locale.currency(sp.df.loc[len(sp.df)-1, "value"], grouping=True)))
+                st.write(str(locale.currency(sp.get_endwert(), grouping=True)))
 
         with cols[1]:
             with st.container(border = True):
                 st.write("**Gewinn**")
-                st.write(str(locale.currency(sp.df.loc[len(sp.df)-1, "gained"], grouping=True)))
+                st.write(str(locale.currency(sp.get_kursgewinn(), grouping=True)))
 
         with cols[2]:
             with st.container(border = True):
                 st.write("**Eingezahlt**")
-                st.write(str(locale.currency(sp.df.loc[len(sp.df)-1, "payed"], grouping=True)))
+                st.write(str(locale.currency(sp.get_eingezahlt(), grouping=True)))
+
+        cols = st.columns(3)
+
+        with cols[0]:
+            with st.container(border = True):
+                st.write("**Netto Endwert**")
+                st.write(str(locale.currency(sp.get_endwert() - sp.get_steuer(), grouping=True)))
+
+        with cols[1]:
+            with st.container(border = True):
+                st.write("**Netto Gewinn**")
+                st.write(str(locale.currency(sp.get_kursgewinn() - sp.get_steuer(), grouping=True)))
+
+        with cols[2]:
+            with st.container(border = True):
+                st.write("**Steuer**")
+                st.write(str(locale.currency(sp.get_steuer(), grouping=True)))
 
         
 
