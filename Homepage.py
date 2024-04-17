@@ -3,20 +3,20 @@ import streamlit as st
 from src.NAS_connection import DatabaseConnectionHandler as DBCHandler
 
 def main():
-    st.title('Connect and update database')
+    st.title('NAS Verbindung für Daten-Update')
 
     with st.form('NAS_credentials'):
         cols = st.columns(2)
         
         with cols[0]:
             ip = st.text_input('IP:')
-            share = st.text_input('Share:')
+            share = st.text_input('Verzeichnis:')
 
         with cols[1]:
-            usr = st.text_input('Username:')
-            pwd = st.text_input('Password:', type="password")
+            usr = st.text_input('Benutzer:')
+            pwd = st.text_input('Passwort:', type="password")
 
-        st.form_submit_button('Update data')
+        st.form_submit_button('Update')
 
     if usr != '':
         nas = DBCHandler(ip=ip, share=share, username=usr, password=pwd)
