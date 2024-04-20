@@ -288,7 +288,7 @@ def monthly_bar_chart(dfs, comparison_type, energy_type):
     for y in years:
         df = dfs[y]
         df = df.loc[df['Monat'] == month]
-        df['Jahr'] = y
+        df.loc[:,'Jahr'] = y
         
         df_long = pd.concat([df_long, df[['Jahr', energy_map[comparison_type][energy_type][0]]]]) 
     
