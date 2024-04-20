@@ -2,7 +2,10 @@ import streamlit as st
 from src.Sparplan import Sparplan
 from datetime import datetime
 import locale
-locale.setlocale(locale.LC_ALL, 'de_DE.utf-8')
+try:
+    locale.setlocale(locale.LC_ALL, 'de_DE.utf-8')
+except:
+    locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
 
 def main():
     with st.expander("**ETF Sparplan**"):
