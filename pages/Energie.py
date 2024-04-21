@@ -1,38 +1,14 @@
 import streamlit as st
 import pandas as pd
+pd.options.mode.copy_on_write=True
 import openpyxl
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime
 
-month_map = {
-    'Januar':0,
-    'Februar':1,
-    'März':2, 
-    'April':3, 
-    'Mai':4, 
-    'Juni':5, 
-    'Juli':6, 
-    'August':7, 
-    'September':8, 
-    'Oktober':9, 
-    'November':10, 
-    'Dezember':11
-}
-
-energy_map = {
-    'absolut': {
-        'Heizung': ['Heizung [kWh]', 'Durchschnitt Heizung [kWh]'],
-        'Warmwasser': ['Warmwasser [kWh]', 'Durchschnitt Warmwaser [kWh]'],
-        'Gesamt': ['Energieverbrauch [kWh]', 'Durchschnitt Energieverbrauch [kWh]']
-    },
-    'relativ': {
-        'Heizung': ['Heizung [kWh/m²]', 'Durchschnitt Heizung [kWh/m²]'],
-        'Warmwasser': ['Warmwasser [kWh/m²]', 'Durchschnitt Warmwaser [kWh/m²]'],
-        'Gesamt': ['Energieverbrauch [kWh/m²]', 'Durchschnitt Energieverbrauch [kWh/m²]']
-    }
-}
+from src import utils
+utils.session_state_helper()
 
 def get_list_start_to_end(start, end, begin_list):
     try:
@@ -59,17 +35,8 @@ def get_list_start_to_end(start, end, begin_list):
 
 def interval_comparison(dfs):
     years = np.array(list(dfs.keys()))
-    months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 
-    selectable_options = []
-
-    for y in years:
-        for m in months:
-            if y != '2023' or (y == '2023' and m in ['Oktober', 'November', 'Dezember']):
-                if int(y) < datetime.now().year:
-                    selectable_options.append(m + ' ' + y)
-                elif int(y) == datetime.now().year and month_map[m] < datetime.now().month:
-                    selectable_options.append(m + ' ' + y)
+    selectable_options = utils.calculate_slider_values_interval(years, 'Oktober')
 
     start_date, end_date = st.select_slider(
         'Zeitspanne',
@@ -102,17 +69,17 @@ def interval_comparison(dfs):
         df.replace(np.nan, 0, inplace=True)
 
         if str(start_year) == str(end_year):
-            df = df.loc[month_map[start_month]:month_map[end_month]]
+            df = df.loc[st.session_state.month_map[start_month]:st.session_state.month_map[end_month]]
         elif str(option) == str(start_year):
             # select dataframe for month range
-            df = df.loc[month_map[start_month]:]
+            df = df.loc[st.session_state.month_map[start_month]:]
         elif str(option) == str(end_year):
             # select dataframe for month range
-            df = df.loc[:month_map[end_month]]
+            df = df.loc[:st.session_state.month_map[end_month]]
                 
         # Melt the DataFrame to make it suitable for grouped bar chart
         df_melted = pd.melt(df, id_vars=['Monat'], var_name='Variable', value_name='Value', 
-                            value_vars=energy_map[comparison_type][energy_type])
+                            value_vars=st.session_state.energy_map[comparison_type][energy_type])
         
         df_melted['Monat'] = df_melted['Monat'] + ' ' + option
         
@@ -121,8 +88,8 @@ def interval_comparison(dfs):
     # st.plotly_chart(interval_bar_chart(df_melted_total))
     st.plotly_chart(interval_line_chart(df_melted_total), use_container_width=True)
 
-    df_melted_total_act = df_melted_total[df_melted_total['Variable'] == energy_map[comparison_type][energy_type][0]]
-    df_melted_total_tar = df_melted_total[df_melted_total['Variable'] == energy_map[comparison_type][energy_type][1]]
+    df_melted_total_act = df_melted_total[df_melted_total['Variable'] == st.session_state.energy_map[comparison_type][energy_type][0]]
+    df_melted_total_tar = df_melted_total[df_melted_total['Variable'] == st.session_state.energy_map[comparison_type][energy_type][1]]
 
     avg_act = np.average(df_melted_total_act['Value'])
     avg_tar = np.average(df_melted_total_tar['Value']) 
@@ -219,34 +186,34 @@ def yearly_line_chart(dfs, comparison_type, energy_type):
 
     show_average = st.checkbox('Zeige den durchschnittlichen Verbrauch')
 
-    df_trendline = dfs[years[0]][['Monat', energy_map[comparison_type][energy_type][0]]]
+    df_trendline = dfs[years[0]][['Monat', st.session_state.energy_map[comparison_type][energy_type][0]]]
 
     # Create lines for each variable
     for y in years:
         if y != years[0]:
-            df_add = dfs[y][energy_map[comparison_type][energy_type][0]]
+            df_add = dfs[y][st.session_state.energy_map[comparison_type][energy_type][0]]
             df_add[df_add.isnull()] = 0
-            df_trendline[energy_map[comparison_type][energy_type][0]] = df_trendline[energy_map[comparison_type][energy_type][0]]+df_add
+            df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] = df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]]+df_add
 
-        fig.add_trace(go.Scatter(x=dfs[y]['Monat'], y=dfs[y][energy_map[comparison_type][energy_type][0]],
+        fig.add_trace(go.Scatter(x=dfs[y]['Monat'], y=dfs[y][st.session_state.energy_map[comparison_type][energy_type][0]],
                                  mode='lines+markers',  # You can choose 'lines' or 'markers' as needed
-                                 name=y+' - '+energy_map[comparison_type][energy_type][0]))
+                                 name=y+' - '+st.session_state.energy_map[comparison_type][energy_type][0]))
         
         if show_average:
-            fig.add_trace(go.Scatter(x=dfs[y]['Monat'], y=dfs[y][energy_map[comparison_type][energy_type][1]],
+            fig.add_trace(go.Scatter(x=dfs[y]['Monat'], y=dfs[y][st.session_state.energy_map[comparison_type][energy_type][1]],
                                      mode='lines+markers',  # You can choose 'lines' or 'markers' as needed
-                                     name=y+' - '+energy_map[comparison_type][energy_type][1]))
+                                     name=y+' - '+st.session_state.energy_map[comparison_type][energy_type][1]))
 
     if energy_type == 'Heizung':
-        df_trendline[energy_map[comparison_type][energy_type][0]] = df_trendline[energy_map[comparison_type][energy_type][0]] / len(years)
-        sum_value = np.sum(df_trendline[energy_map[comparison_type][energy_type][0]])
+        df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] = df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] / len(years)
+        sum_value = np.sum(df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]])
         
         if comparison_type == 'relativ':
-            df_trendline[energy_map[comparison_type][energy_type][0]] = df_trendline[energy_map[comparison_type][energy_type][0]] * 26 / sum_value
+            df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] = df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] * 26 / sum_value
         else:
-            df_trendline[energy_map[comparison_type][energy_type][0]] = df_trendline[energy_map[comparison_type][energy_type][0]] * 2028 / sum_value
+            df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] = df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]] * 2028 / sum_value
 
-        fig.add_trace(go.Scatter(x=df_trendline['Monat'], y=df_trendline[energy_map[comparison_type][energy_type][0]],
+        fig.add_trace(go.Scatter(x=df_trendline['Monat'], y=df_trendline[st.session_state.energy_map[comparison_type][energy_type][0]],
                                  mode='lines+markers',  # You can choose 'lines' or 'markers' as needed
                                  name='Energieausweis'))
 
@@ -278,7 +245,7 @@ def monthly_bar_chart(dfs, comparison_type, energy_type):
 
     show_average = st.checkbox('Zeige den durchschnittlichen Verbrauch', key='average_2')
 
-    months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+    months = list(st.session_state.month_map.keys())
     month = st.selectbox('Monat', months)
 
     df_long = pd.DataFrame()
@@ -290,18 +257,18 @@ def monthly_bar_chart(dfs, comparison_type, energy_type):
         df = df.loc[df['Monat'] == month]
         df.loc[:,'Jahr'] = y
         
-        df_long = pd.concat([df_long, df[['Jahr', energy_map[comparison_type][energy_type][0]]]]) 
+        df_long = pd.concat([df_long, df[['Jahr', st.session_state.energy_map[comparison_type][energy_type][0]]]]) 
     
-        df_long_average = pd.concat([df_long_average, df[['Jahr', energy_map[comparison_type][energy_type][1]]]])
+        df_long_average = pd.concat([df_long_average, df[['Jahr', st.session_state.energy_map[comparison_type][energy_type][1]]]])
 
-    fig.add_trace(go.Bar(x=df_long['Jahr'], y=df_long[energy_map[comparison_type][energy_type][0]],
+    fig.add_trace(go.Bar(x=df_long['Jahr'], y=df_long[st.session_state.energy_map[comparison_type][energy_type][0]],
                              # mode='lines+markers',  # You can choose 'lines' or 'markers' as needed
-                             name=y+' - '+energy_map[comparison_type][energy_type][0]))
+                             name=y+' - '+st.session_state.energy_map[comparison_type][energy_type][0]))
 
     if show_average:
-        fig.add_trace(go.Bar(x=df_long_average['Jahr'], y=df_long_average[energy_map[comparison_type][energy_type][1]],
+        fig.add_trace(go.Bar(x=df_long_average['Jahr'], y=df_long_average[st.session_state.energy_map[comparison_type][energy_type][1]],
                              # mode='lines+markers',  # You can choose 'lines' or 'markers' as needed
-                             name=y+' - '+energy_map[comparison_type][energy_type][1]))
+                             name=y+' - '+st.session_state.energy_map[comparison_type][energy_type][1]))
 
     # Update layout
     fig.update_layout(xaxis_title='Jahr',

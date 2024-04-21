@@ -1,16 +1,10 @@
 import pandas as pd
+pd.options.mode.copy_on_write = True
 from numbers import Number
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import numpy as np
 import streamlit as st
-
-interval_map = {
-    'monatlich' : 1,
-    'vierteljährlich' : 3,
-    'halbjährlich' : 6,
-    'jährlich' : 12
-}
 
 class Sparplan():
     def __init__(self, start, end, rate, interval = 'monatlich'):
@@ -36,7 +30,7 @@ class Sparplan():
         
     def set_interval(self, interval):
         try:
-            self.interval = interval_map[interval]
+            self.interval = st.session_state.interval_map[interval]
         except:
             raise Exception("Das gewählte Intervall ist nicht verfügbar")
         

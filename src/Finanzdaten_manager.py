@@ -1,6 +1,8 @@
 from copy import copy
 from datetime import datetime
 import pandas as pd
+pd.options.mode.copy_on_write = True
+import streamlit as st
 
 class Finanzdaten_manager:
     def __init__(self, base):
@@ -20,18 +22,7 @@ class Finanzdaten_manager:
 
     def build_df_dict(self, year):
         yearly_dict = {}
-        months = ['Januar',
-                  'Februar',
-                  'März',
-                  'April',
-                  'Mai',
-                  'Juni',
-                  'Juli',
-                  'August',
-                  'September',
-                  'Oktober',
-                  'November',
-                  'Dezember']
+        months = list(st.session_state.month_map.keys())
         
         m_index = 1
 

@@ -1,0 +1,12 @@
+{
+    "absolut": {
+        "Heizung": ["Heizung [kWh]", "Durchschnitt Heizung [kWh]"],
+        "Warmwasser": ["Warmwasser [kWh]", "Durchschnitt Warmwaser [kWh]"],
+        "Gesamt": ["Energieverbrauch [kWh]", "Durchschnitt Energieverbrauch [kWh]"]
+    },
+    "relativ": {
+        "Heizung": ["Heizung [kWh/m²]", "Durchschnitt Heizung [kWh/m²]"],
+        "Warmwasser": ["Warmwasser [kWh/m²]", "Durchschnitt Warmwaser [kWh/m²]"],
+        "Gesamt": ["Energieverbrauch [kWh/m²]", "Durchschnitt Energieverbrauch [kWh/m²]"]
+    }
+}

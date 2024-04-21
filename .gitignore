@@ -5,7 +5,7 @@
 *personal_dashboard.egg-info/*
 
 # ignore data
-*data/*
+*data/*.xlsx
 
 # ignore pycache
 *__pycache__*

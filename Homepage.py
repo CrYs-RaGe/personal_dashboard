@@ -1,5 +1,8 @@
 import streamlit as st
 
+from src import utils
+utils.session_state_helper()
+
 from src.NAS_connection import DatabaseConnectionHandler as DBCHandler
 
 def main():

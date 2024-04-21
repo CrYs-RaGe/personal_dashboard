@@ -7,6 +7,9 @@ try:
 except:
     locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
 
+from src import utils
+utils.session_state_helper()
+
 def main():
     with st.expander("**ETF Sparplan**"):
 
