@@ -4,11 +4,6 @@ import streamlit as st
 
 from src.Finanzdaten_manager import Finanzdaten_manager as fin
 
-
-class Data_storage:
-    def __init__(self) -> None:
-        pass
-
 def get_data():
     # Open an existing Excel file
     workbook = openpyxl.load_workbook('data/Finanzen_gesamt.xlsx')
@@ -33,9 +28,9 @@ def main():
 
     data = fin(dfs)
 
-    st.write(dfs['2021'])
-
-    st.write(data.base['2024'])
+    year = st.selectbox('Jahr', data.dfs.keys())
+    month = st.selectbox('Monat', data.dfs[year].keys())
+    st.write(data.dfs[year][month])
 
 if __name__ == '__main__':
     main()
