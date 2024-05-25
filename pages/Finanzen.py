@@ -6,7 +6,13 @@ from copy import copy
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import calendar
+import locale
+try:
+    locale.setlocale(locale.LC_ALL, 'de_DE.utf-8')
+except:
+    locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
 
 from src import utils
 utils.session_state_helper()
@@ -30,9 +36,9 @@ def get_data():
 
     return dfs
 
-def interval(years):
-    if st.checkbox("Jahre ausschließen"):
-        max_year = st.selectbox("Alle Jahre ausschließen bis:", years)
+def interval(years, tab_number):
+    if st.checkbox("Jahre ausschließen", key="exclude_years_check"+str(tab_number)):
+        max_year = st.selectbox("Alle Jahre ausschließen bis einschließlich:", years, key="selectbox_exclude_years"+str(tab_number))
     
         for w in years[:years.index(max_year)+1]:
             years.remove(w)
@@ -42,7 +48,8 @@ def interval(years):
     start_date, end_date = st.select_slider(
         'Zeitspanne',
         options=selectable_options,
-        value=(selectable_options[0], selectable_options[-1]))
+        value=(selectable_options[0], selectable_options[-1]),
+        key="interval_select_slider"+str(tab_number))
     
     start_year = start_date.split()[1]
     start_month = start_date.split()[0]
@@ -52,8 +59,8 @@ def interval(years):
 
     return start_year, start_month, end_year, end_month
 
-def yearly(years):
-    start_year = st.selectbox('Jahr', years, index=len(years)-1, key='Jahr_yearly')
+def yearly(years, tab_number):
+    start_year = st.selectbox('Jahr', years, index=len(years)-1, key='Jahr_yearly'+str(tab_number))
     end_year = start_year
 
     start_month = 'Januar'
@@ -61,13 +68,13 @@ def yearly(years):
 
     return start_year, start_month, end_year, end_month
 
-def monthly(years):
-    start_year = st.selectbox('Jahr', years, index=len(years)-1, key='Jahr_monthly')
+def monthly(years, tab_number):
+    start_year = st.selectbox('Jahr', years, index=len(years)-1, key='Jahr_monthly'+str(tab_number))
     end_year = start_year
 
     months = list(st.session_state.month_map.keys())
 
-    start_month = st.selectbox('Monat', months, index=months.index(calendar.month_name[datetime.now().month]), key='Monat_monthly')
+    start_month = st.selectbox('Monat', months, index=months.index(calendar.month_name[datetime.now().month]), key='Monat_monthly'+str(tab_number))
     end_month = start_month
 
     return start_year, start_month, end_year, end_month
@@ -75,7 +82,7 @@ def monthly(years):
 def build_interval_df(data, start_year, start_month, end_year, end_month):
     months = list(st.session_state.month_map.keys())
 
-    column_names_unified = ['Betrag', 'Beschreibung', 'Kategorie']
+    column_names_unified = ['Betrag', 'Beschreibung', 'Kategorie', "Year", "Month"]
     interval_df = pd.DataFrame(columns=column_names_unified)
     dfs = copy(data.dfs)
 
@@ -85,20 +92,28 @@ def build_interval_df(data, start_year, start_month, end_year, end_month):
             if str(y) == start_year:
                 for m in months[months.index(start_month):]:
                     df = dfs[y][m].rename(columns=dict(zip(dfs[y][m].columns, column_names_unified)))
+                    df["Year"]=y
+                    df["Month"]=st.session_state.month_map[m]+1
                     interval_df = pd.concat([interval_df, df], ignore_index=True)
             elif str(y) == end_year:
                 for m in months[:months.index(end_month)+1]:
                     df = dfs[y][m].rename(columns=dict(zip(dfs[y][m].columns, column_names_unified)))
+                    df["Year"]=y
+                    df["Month"]=st.session_state.month_map[m]+1
                     interval_df = pd.concat([interval_df, df], ignore_index=True)
             else:
                 for m in months:
                     df = dfs[y][m].rename(columns=dict(zip(dfs[y][m].columns, column_names_unified)))
+                    df["Year"]=y
+                    df["Month"]=st.session_state.month_map[m]+1
                     interval_df = pd.concat([interval_df, df], ignore_index=True)
 
     else:
         for m in months[months.index(start_month):months.index(end_month)+1]:
             y = int(start_year)
             df = dfs[y][m].rename(columns=dict(zip(dfs[y][m].columns, column_names_unified)))
+            df["Year"]=y
+            df["Month"]=st.session_state.month_map[m]+1
             interval_df = pd.concat([interval_df, df], ignore_index=True)
 
     return interval_df
@@ -211,7 +226,28 @@ def pareto_chart(interval_df):
     fig.update_layout(barmode='stack', xaxis={'categoryorder':'total ascending'})
 
     return fig
+
+def collect_data(data, tab_number):
+    option = st.selectbox('Addition über welche Art von Zeitraum?',['Intervall', 'Jährlich', 'Monat'], key="option_selectbox_interval"+str(tab_number))
+
+    if option == 'Intervall':
+        start_year, start_month, end_year, end_month = interval(list(data.dfs.keys()), tab_number)
+    
+    elif option == 'Jährlich':
+        start_year, start_month, end_year, end_month = yearly(list(data.dfs.keys()), tab_number)
+    
+    elif option == 'Monat':
+        start_year, start_month, end_year, end_month = monthly(list(data.dfs.keys()), tab_number)
+    
+    interval_df = build_interval_df(data, start_year, start_month, end_year, end_month)
+    with st.expander('Daten'):
+        st.write(interval_df)
+
+    return interval_df
         
+def create_date(row):
+    return datetime.strptime(f"01.{str(row['Month'])}.{str(row['Year'])}", "%d.%m.%Y").date()
+
 def main():
     st.title("Finanzen")
 
@@ -223,20 +259,7 @@ def main():
 
     with tabs[0]:
 
-        option = st.selectbox('Addition über welche Art von Zeitraum?',['Intervall', 'Jährlich', 'Monat'])
-
-        if option == 'Intervall':
-            start_year, start_month, end_year, end_month = interval(list(data.dfs.keys()))
-
-        elif option == 'Jährlich':
-            start_year, start_month, end_year, end_month = yearly(list(data.dfs.keys()))
-
-        elif option == 'Monat':
-            start_year, start_month, end_year, end_month = monthly(list(data.dfs.keys()))
-
-        interval_df = build_interval_df(data, start_year, start_month, end_year, end_month)
-        with st.expander('Daten'):
-            st.write(interval_df)
+        interval_df = collect_data(data, 0)
 
         subtabs = st.tabs(['Sunburst', 'Wasserfall', 'Pareto'])    
 
@@ -250,9 +273,51 @@ def main():
             st.plotly_chart(pareto_chart(interval_df))        
 
 
-    with tabs[1]:
-        pass
-        # start_year, start_month, end_year, end_month = monthly(list(data.dfs.keys()))
+    with tabs[2]:
+        
+        interval_df = collect_data(data, 2)
+
+        grouped_df = interval_df.groupby(['Kategorie', 'Year', 'Month'])['Betrag'].sum().reset_index()
+        
+        distinct_categories = grouped_df['Kategorie'].unique()
+        category = st.selectbox("Kategorie", distinct_categories)
+        filtered_df = grouped_df.query(f"Kategorie == '{category}'")
+
+        # Apply the function to each row
+        filtered_df['Datum'] = filtered_df.apply(create_date, axis=1)
+        with st.expander("Gefilterte Daten"):
+            st.write(filtered_df)
+
+        delta = relativedelta(filtered_df['Datum'].max(), filtered_df['Datum'].min())
+    
+        # Calculate the total number of months
+        count_value = delta.years * 12 + delta.months
+       
+        sum_value = filtered_df['Betrag'].sum()
+        year_fraction = count_value / 12
+
+        filtered_df['Durchschnitt'] = sum_value/count_value
+
+        tabs = st.columns(3)
+
+        with tabs[0]:
+            with st.container(border = True):
+                st.write("**Summe**")
+                st.write(str(locale.currency(sum_value)))
+
+        with tabs[1]:
+            with st.container(border = True):
+                st.write("**Monatlich**")
+                st.write(str(locale.currency(sum_value/count_value)))
+
+        with tabs[2]:
+            with st.container(border = True):
+                st.write("**Jährlich**")
+                st.write(str(locale.currency(sum_value/year_fraction)))
+
+        fig = px.bar(filtered_df, x='Datum', y='Betrag')
+        fig.add_scatter(x=filtered_df['Datum'], y=filtered_df['Durchschnitt'], mode='lines', name="Durchschnitt", line=dict(color='rgba(255, 0, 0, 1)'))
+        st.plotly_chart(fig, use_container_width=True)
     
 
 if __name__ == '__main__':
