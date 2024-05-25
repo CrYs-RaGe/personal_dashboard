@@ -118,7 +118,8 @@ class Sparplan():
             df_to_add = pd.DataFrame({"date": [current_date], 
                                       "payed": [last_payed + amount], 
                                       "value": [last_value * (1 + effective_rate) + amount], 
-                                      "gained": [last_value * (1 + effective_rate) - last_payed]})
+                                      "gained": [last_value * (1 + effective_rate) - last_payed],
+                                      "tax":[(last_value * (1 + effective_rate) - last_payed) * 0.7 * 0.28]})
             self.df = pd.concat([self.df, df_to_add], ignore_index=True)
 
             current_date += relativedelta(months = self.interval)
@@ -126,7 +127,7 @@ class Sparplan():
         self.etf_endwert = self.df.loc[len(self.df)-1, "value"]
         self.etf_kursgewinn = self.df.loc[len(self.df)-1, "gained"]
         self.etf_eingezahlt = self.df.loc[len(self.df)-1, "payed"]
-        self.etf_steuer = self.etf_kursgewinn * 0.7 * 0.28
+        self.etf_steuer = self.df.loc[len(self.df)-1, "tax"]
 
         return self.df
     
