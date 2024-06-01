@@ -244,6 +244,17 @@ def collect_data(data, tab_number):
         st.write(interval_df)
 
     return interval_df
+
+def collect_data_forecast(data, tab_number):
+   
+    start_year, start_month, end_year, end_month = interval(list(data.dfs.keys()), tab_number)
+
+    interval_df = build_interval_df(data, start_year, start_month, end_year, end_month)
+    with st.expander('Daten'):
+        st.write(interval_df)
+
+    return interval_df
+
         
 def create_date(row):
     return datetime.strptime(f"01.{str(row['Month'])}.{str(row['Year'])}", "%d.%m.%Y").date()
@@ -255,7 +266,7 @@ def main():
 
     data = fin(dfs)
 
-    tabs = st.tabs(['Addition','Vergleich','Kategorie','Prognose'])
+    tabs = st.tabs(['Addition','Kategorie','Prognose'])
 
     with tabs[0]:
 
@@ -273,9 +284,9 @@ def main():
             st.plotly_chart(pareto_chart(interval_df))        
 
 
-    with tabs[2]:
+    with tabs[1]:
         
-        interval_df = collect_data(data, 2)
+        interval_df = collect_data(data, 1)
 
         grouped_df = interval_df.groupby(['Kategorie', 'Year', 'Month'])['Betrag'].sum().reset_index()
         
@@ -291,26 +302,26 @@ def main():
         delta = relativedelta(filtered_df['Datum'].max(), filtered_df['Datum'].min())
     
         # Calculate the total number of months
-        count_value = delta.years * 12 + delta.months
+        count_value = delta.years * 12 + delta.months + 1
        
         sum_value = filtered_df['Betrag'].sum()
         year_fraction = count_value / 12
 
         filtered_df['Durchschnitt'] = sum_value/count_value
 
-        tabs = st.columns(3)
+        subtabs_category = st.columns(3)
 
-        with tabs[0]:
+        with subtabs_category[0]:
             with st.container(border = True):
                 st.write("**Summe**")
                 st.write(str(locale.currency(sum_value)))
 
-        with tabs[1]:
+        with subtabs_category[1]:
             with st.container(border = True):
                 st.write("**Monatlich**")
                 st.write(str(locale.currency(sum_value/count_value)))
 
-        with tabs[2]:
+        with subtabs_category[2]:
             with st.container(border = True):
                 st.write("**Jährlich**")
                 st.write(str(locale.currency(sum_value/year_fraction)))
@@ -318,7 +329,47 @@ def main():
         fig = px.bar(filtered_df, x='Datum', y='Betrag')
         fig.add_scatter(x=filtered_df['Datum'], y=filtered_df['Durchschnitt'], mode='lines', name="Durchschnitt", line=dict(color='rgba(255, 0, 0, 1)'))
         st.plotly_chart(fig, use_container_width=True)
+
+    with tabs[2]:
+        interval_df = collect_data_forecast(data, 2)
+
+        interval_df['Datum'] = interval_df.apply(create_date, axis=1)
+
+        delta = relativedelta(interval_df['Datum'].max(), interval_df['Datum'].min())
     
+        # Calculate the total number of months
+        count_value = delta.years * 12 + delta.months + 1
+
+        grouped_df = interval_df.groupby(['Datum'])['Betrag'].sum().reset_index()
+        
+        monthly_mean = grouped_df["Betrag"].mean()
+        grouped_df["Durchschnitt"] = monthly_mean
+        grouped_df["Durchschnitt acc"] = 0.0
+        grouped_df["Betrag acc"] = 0.0
+
+        for i in range(len(grouped_df)):
+            if i == 0:
+                grouped_df.loc[i, "Durchschnitt acc"] = grouped_df["Durchschnitt"].loc[i]
+                grouped_df.loc[i, "Betrag acc"] = grouped_df["Betrag"].loc[i]
+            else:
+                grouped_df.loc[i, "Durchschnitt acc"] = grouped_df["Durchschnitt acc"].loc[i-1] + grouped_df["Durchschnitt"].loc[i]
+                grouped_df.loc[i, "Betrag acc"] = grouped_df["Betrag acc"].loc[i-1] + grouped_df["Betrag"].loc[i]
+
+        Sparziel = st.number_input("Sparziel", min_value=0, max_value=1000000, value=200000, step=1)
+        ausgangspunkt = grouped_df.loc[grouped_df.index[-1], "Durchschnitt acc"]
+        anzahl_monate = (Sparziel-ausgangspunkt)/monthly_mean
+
+        endzeitpunkt = grouped_df["Datum"].max() + relativedelta(months=int(anzahl_monate + 1))
+        st.write("Ziel wird erreicht werden: " + str(endzeitpunkt))
+
+        neuer_index = grouped_df.index[-1]+1
+        grouped_df.loc[neuer_index, "Durchschnitt acc"] = ausgangspunkt  + monthly_mean * int(anzahl_monate+1)
+        grouped_df.loc[neuer_index, "Datum"] = endzeitpunkt
+
+        fig = px.line(grouped_df, x='Datum', y='Betrag acc')
+        fig.add_scatter(x=grouped_df['Datum'], y=grouped_df['Durchschnitt acc'], name="Durchschnitt", mode="lines")
+        st.plotly_chart(fig, use_container_width=True)
+            
 
 if __name__ == '__main__':
     main()
